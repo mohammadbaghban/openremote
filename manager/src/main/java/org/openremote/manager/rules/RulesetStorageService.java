@@ -152,9 +152,13 @@ public class RulesetStorageService implements ContainerService {
     }
 
     public <T extends Ruleset> T merge(T ruleset) {
-        return persistenceService.doReturningTransaction(entityManager ->
-                entityManager.merge(ruleset)
-        );
+        return persistenceService.doReturningTransaction(entityManager -> {
+            // Normalize invalid transient identifiers sometimes sent by clients (e.g. id=0)
+            if (ruleset.getId() != null && ruleset.getId() == 0L) {
+                ruleset.setId(null);
+            }
+            return entityManager.merge(ruleset);
+        });
     }
 
     public <T extends Ruleset> void delete(Class<T> rulesetType, Long id) {

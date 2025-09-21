@@ -23,6 +23,7 @@ export interface ChartWidgetConfig extends WidgetConfig {
 
 function getDefaultTimePresetOptions(): Map<string, TimePresetCallback> {
     return new Map<string, TimePresetCallback>([
+        ["lastTenSeconds", (date: Date) => [moment(date).subtract(10, 'seconds').toDate(), date]],
         ["lastHour", (date: Date) => [moment(date).subtract(1, 'hour').toDate(), date]],
         ["last24Hours", (date: Date) => [moment(date).subtract(24, 'hours').toDate(), date]],
         ["last7Days", (date: Date) => [moment(date).subtract(7, 'days').toDate(), date]],

@@ -736,6 +736,7 @@
     "access.private": "Alleen ik",
     "interval.off": "Autom-verversing uit",
     "interval.one_min": "1 min",
+    "interval.one_sec": "1 sec",
     "interval.five_min": "5 min",
     "interval.quarter": "15 min",
     "interval.one_hour": "1 uur",

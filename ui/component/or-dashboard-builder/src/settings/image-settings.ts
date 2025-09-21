@@ -73,6 +73,19 @@ export class ImageSettings extends AssetWidgetSettings {
                                       @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onImageUrlUpdate(ev)}"
                         ></or-mwc-input>
                     </div>
+
+                    <div style="margin-top: 12px;">
+                        <div style="margin-bottom: 6px; font-size: 0.9em; color: var(--or-app-color2);">
+                            Image URL attribute (optional)
+                        </div>
+                        <attributes-panel .attributeRefs="${this.widgetConfig.imageUrlAttributeRef ? [this.widgetConfig.imageUrlAttributeRef] : []}"
+                                          onlyDataAttrs="${true}" multi="${false}"
+                                          @attribute-select="${(ev: AttributesSelectEvent) => this.onImageUrlAttributeSelect(ev)}"
+                        ></attributes-panel>
+                        <div style="margin-top: 6px; color: gray; font-size: 0.85em;">
+                            If set, this attribute's string value will be used as the image URL and overrides the static Image URL above.
+                        </div>
+                    </div>
                 </settings-panel>
             </div>
         `;
@@ -85,6 +98,21 @@ export class ImageSettings extends AssetWidgetSettings {
 
     protected onImageUrlUpdate(ev: OrInputChangedEvent) {
         this.widgetConfig.imagePath = ev.detail.value;
+        this.notifyConfigUpdate();
+    }
+
+    protected onImageUrlAttributeSelect(ev: AttributesSelectEvent) {
+        const refs: AttributeRef[] = ev.detail.attributeRefs || [];
+        const newRef: AttributeRef | undefined = refs.length > 0 ? refs[0] : undefined;
+        const oldRef: AttributeRef | undefined = this.widgetConfig.imageUrlAttributeRef;
+        const unchanged = (
+            (!oldRef && !newRef) ||
+            (oldRef && newRef && oldRef.id === newRef.id && oldRef.name === newRef.name)
+        );
+        if (unchanged) {
+            return; // Avoid infinite update loops when the selection hasn't changed
+        }
+        this.widgetConfig.imageUrlAttributeRef = newRef;
         this.notifyConfigUpdate();
     }
 

@@ -3646,7 +3646,7 @@
         "text-font": [
           "Open Sans Bold"
         ],
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-transform": "uppercase",
         "text-max-width": 9
       },
@@ -3686,7 +3686,7 @@
             ]
           ]
         },
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-max-width": 8
       },
       "paint": {
@@ -3725,7 +3725,7 @@
             ]
           ]
         },
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-max-width": 8
       },
       "paint": {
@@ -3772,7 +3772,7 @@
             ]
           ]
         },
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-max-width": 8
       },
       "paint": {
@@ -3819,7 +3819,7 @@
             ]
           ]
         },
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-max-width": 8,
         "icon-image": "star_11",
         "text-offset": [
@@ -3860,7 +3860,7 @@
         "text-font": [
           "Open Sans Bold"
         ],
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-size": {
           "stops": [
             [
@@ -3908,7 +3908,7 @@
         "text-font": [
           "Open Sans Bold"
         ],
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-size": {
           "stops": [
             [
@@ -3956,7 +3956,7 @@
         "text-font": [
           "Open Sans Bold"
         ],
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-size": {
           "stops": [
             [
@@ -3997,7 +3997,7 @@
         "text-font": [
           "Open Sans Bold"
         ],
-        "text-field": "{name_en}",
+        "text-field": "{name}",
         "text-size": 14,
         "text-max-width": 6.25,
         "text-transform": "uppercase"

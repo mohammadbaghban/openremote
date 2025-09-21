@@ -7,8 +7,9 @@ import {css, CSSResult, html, PropertyValues, TemplateResult, unsafeCSS } from "
 import {OrAssetWidget} from "../util/or-asset-widget";
 import {ImageSettings} from "../settings/image-settings";
 import { when } from "lit/directives/when.js";
-import {DefaultColor2, DefaultColor3, Util} from "@openremote/core";
+import manager, {DefaultColor2, DefaultColor3, Util} from "@openremote/core";
 import { styleMap } from "lit/directives/style-map.js";
+import { repeat } from "lit/directives/repeat.js";
 
 const styling = css`
   #img-wrapper {
@@ -58,6 +59,8 @@ export interface ImageWidgetConfig extends WidgetConfig {
     markers: ImageAssetMarker[];
     showTimestampControls: boolean;
     imagePath: string;
+    // Optional: bind image URL to a string attribute; if set, this overrides imagePath
+    imageUrlAttributeRef?: AttributeRef;
 }
 
 function getDefaultWidgetConfig(): ImageWidgetConfig {
@@ -74,6 +77,72 @@ export class ImageWidget extends OrAssetWidget {
 
     // Override of widgetConfig with extended type
     protected readonly widgetConfig!: ImageWidgetConfig;
+
+    // Live update subscription id
+    protected _attributeSubscriptionId?: string;
+
+    // Version bump to force <img> reload when attribute changes but URL string stays the same
+    protected _imageVersion: number = 0;
+
+    protected getAllAttributeRefs(): AttributeRef[] {
+        const attributeRefs = this.widgetConfig?.attributeRefs || [];
+        return this.widgetConfig?.imageUrlAttributeRef ? [...attributeRefs, this.widgetConfig.imageUrlAttributeRef] : attributeRefs;
+    }
+
+    connectedCallback() {
+        super.connectedCallback?.();
+        this._subscribeAttributeEvents();
+    }
+
+    disconnectedCallback() {
+        this._unsubscribeAttributeEvents();
+        super.disconnectedCallback?.();
+    }
+
+    protected async _subscribeAttributeEvents() {
+        try {
+            const refs = this.getAllAttributeRefs();
+            if (!refs || refs.length === 0) {
+                return;
+            }
+            const events = manager.events;
+            if (!events) {
+                console.log("ImageWidget: No event provider available so cannot subscribe");
+                return;
+            }
+            // Request current values so initial state is pushed via events as well
+            this._attributeSubscriptionId = await events.subscribeAttributeEvents(refs, true, (event) => {
+                const ref = event.ref!;
+                // Update cached asset/attribute on event
+                const idx = this.loadedAssets.findIndex(a => a.id === ref.id);
+                if (idx >= 0) {
+                    // Shallow clone and update via Util.updateAsset helper for consistency
+                    const copy = {...this.loadedAssets[idx]};
+                    const updated = Util.updateAsset(copy as any, event as any);
+                    const nextAssets = [...this.loadedAssets];
+                    nextAssets[idx] = updated as any;
+                    this.loadedAssets = nextAssets;
+                }
+                // If the event pertains to the image URL attribute, bump version for cache-busting
+                const imgRef = this.widgetConfig?.imageUrlAttributeRef;
+                if (imgRef && ref.id === imgRef.id && ref.name === imgRef.name) {
+                    this._imageVersion++;
+                }
+                // Trigger render update
+                this.requestUpdate();
+            });
+        } catch (e) {
+            // Non-fatal; widget will still show last fetched state
+            console.warn("ImageWidget: failed to subscribe attribute events", e);
+        }
+    }
+
+    protected _unsubscribeAttributeEvents() {
+        if (this._attributeSubscriptionId) {
+            manager.events?.unsubscribe(this._attributeSubscriptionId);
+            this._attributeSubscriptionId = undefined;
+        }
+    }
 
     static getManifest(): WidgetManifest {
         return {
@@ -104,20 +173,32 @@ export class ImageWidget extends OrAssetWidget {
     willUpdate(changedProps: PropertyValues) {
 
         if(changedProps.has('widgetConfig') && this.widgetConfig) {
-            const attributeRefs = this.widgetConfig.attributeRefs;
-            const missingAssets = attributeRefs?.filter((attrRef: AttributeRef) => !this.isAttributeRefLoaded(attrRef));
+            const prevConfig = changedProps.get('widgetConfig') as ImageWidgetConfig | undefined;
+
+            const attributeRefs = this.widgetConfig.attributeRefs || [];
+            const allRefs: AttributeRef[] = this.widgetConfig.imageUrlAttributeRef ? [...attributeRefs, this.widgetConfig.imageUrlAttributeRef] : attributeRefs;
+            const missingAssets = allRefs?.filter((attrRef: AttributeRef) => !this.isAttributeRefLoaded(attrRef));
             if (missingAssets.length > 0) {
                 this.loadAssets();
             }
+            // If static imagePath changed, bump version to force reload
+            if (prevConfig && prevConfig.imagePath !== this.widgetConfig.imagePath) {
+                this._imageVersion++;
+            }
+            // Refresh live subscriptions if config changed
+            this._unsubscribeAttributeEvents();
+            this._subscribeAttributeEvents();
         }
 
         return super.willUpdate(changedProps);
     }
 
     protected loadAssets() {
-        this.fetchAssets(this.widgetConfig.attributeRefs).then(assets => {
+        const attributeRefs = this.widgetConfig.attributeRefs || [];
+        const allRefs: AttributeRef[] = this.widgetConfig.imageUrlAttributeRef ? [...attributeRefs, this.widgetConfig.imageUrlAttributeRef] : attributeRefs;
+        this.fetchAssets(allRefs).then(assets => {
             this.loadedAssets = assets!;
-            this.assetAttributes = this.widgetConfig.attributeRefs.map((attrRef: AttributeRef) => {
+            this.assetAttributes = attributeRefs.map((attrRef: AttributeRef) => {
                 const assetIndex = assets!.findIndex(asset => asset.id === attrRef.id);
                 const foundAsset = assetIndex >= 0 ? assets![assetIndex] : undefined;
                 return foundAsset && foundAsset.attributes ? [assetIndex, foundAsset.attributes[attrRef.name!]] : undefined;
@@ -161,13 +242,44 @@ export class ImageWidget extends OrAssetWidget {
         }
     }
 
+    protected getImagePathFromAttribute(): string | undefined {
+        const imgRef = this.widgetConfig.imageUrlAttributeRef;
+        if (!imgRef || !this.loadedAssets || this.loadedAssets.length === 0) {
+            return undefined;
+        }
+        const asset = this.loadedAssets.find(a => a.id === imgRef.id);
+        if (!asset || !asset.attributes) {
+            return undefined;
+        }
+        const attribute = asset.attributes[imgRef.name!];
+        if (!attribute) {
+            return undefined;
+        }
+        const descriptors = AssetModelUtil.getAttributeAndValueDescriptors(asset.type, imgRef.name, attribute);
+        const value = Util.getAttributeValueAsString(attribute, descriptors[0], asset.type, true, "-");
+        if (!value || value === "-") {
+            return undefined;
+        }
+        return value;
+    }
+
+    protected _withCacheBust(url: string | undefined, version: number): string | undefined {
+        if (!url) return url;
+        const sep = url.includes("?") ? "&" : "?";
+        return `${url}${sep}v=${version}`;
+    }
+
     protected render(): TemplateResult {
-        const imagePath = this.widgetConfig.imagePath;
+        const attrPath = this.getImagePathFromAttribute();
+        const rawPath = attrPath ?? this.widgetConfig.imagePath;
+        const imagePath = this._withCacheBust(rawPath, this._imageVersion);
         return html`
             <div id="img-wrapper">
                 ${when(imagePath, () => html`
                     <div id="img-container">
-                        <img id="img-content" src="${imagePath}" alt=""/>
+                        ${repeat([imagePath], (key) => key, () => html`
+                            <img id="img-content" src="${imagePath}" alt=""/>
+                        `)}
                         <div>
                             ${this.handleMarkerPlacement(this.widgetConfig)}
                         </div>

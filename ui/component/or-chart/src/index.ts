@@ -1036,6 +1036,7 @@ export class OrChart extends translate(i18next)(LitElement) {
 
     protected _getDefaultTimestampOptions(): Map<string, TimePresetCallback> {
         return new Map<string, TimePresetCallback>([
+            ["lastTenSeconds", (date) => [moment(date).subtract(10, 'seconds').toDate(), date]],
             ["lastHour", (date) => [moment(date).subtract(1, 'hour').toDate(), date]],
             ["last24Hours", (date) => [moment(date).subtract(24, 'hours').toDate(), date]],
             ["last7Days", (date) => [moment(date).subtract(7, 'days').toDate(), date]],

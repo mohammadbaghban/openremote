@@ -172,4 +172,48 @@ kubectl get svc
 kubectl port-forward svc/postgresql 5432:5432
 ```
 
+### Using a custom Manager Docker image
+
+If you have built your own Manager Docker image (for example with extra locales or branding) and pushed it to a registry, you can deploy it with the Helm chart by overriding the image fields in the manager values.
+
+- image.repository: the repository name (e.g. ghcr.io/your-org/openremote-manager)
+- image.tag: the image tag to use (e.g. 1.0.0 or latest)
+- image.pullPolicy: the Kubernetes image pull policy (IfNotPresent, Always, etc.)
+- imagePullSecrets: reference to Kubernetes secret(s) for private registries
+
+Example custom values file manager/values-image.yaml:
+
+```yaml
+image:
+  repository: ghcr.io/your-org/openremote-manager
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+
+# If your registry requires authentication, create the secret first and reference it here
+imagePullSecrets:
+  - name: ghcr
+```
+
+Then install or upgrade the chart using your custom values:
+
+```bash
+# Install the stack prerequisites (as shown above)
+helm install postgresql postgresql
+helm install keycloak keycloak
+
+# Deploy Manager with your image
+helm install manager manager -f manager/values-image.yaml
+# or update an existing release
+helm upgrade manager manager -f manager/values-image.yaml
+```
+
+If you need to set additional environment variables for the Manager container, use the or.env section in the manager values:
+
+```yaml
+or:
+  env:
+    - name: OR_DEV_MODE
+      value: "false"
+```
+
 ## Guidelines

@@ -65,6 +65,33 @@ Note that historical attribute data is purged daily based on value of `OR_DATA_P
 See the [Developer Guide](https://docs.openremote.io/docs/developer-guide/useful-commands-and-queries/#backuprestore-openremote-db) for details on making backups of the database.
 
 
+## Build the Manager Docker image
+
+If you have added locales (e.g. Farsi) or other UI changes and want a Docker image that includes them, use the helper script:
+
+- Build and tag locally (defaults to repository openremote/manager):
+
+```
+tools/build-manager-image.sh fa-local
+```
+
+- Use a custom repository (e.g. GitHub Container Registry) and tag:
+
+```
+REPOSITORY=ghcr.io/your-org/openremote-manager tools/build-manager-image.sh 1.0.0
+```
+
+- Push the image after building:
+
+```
+REPOSITORY=ghcr.io/your-org/openremote-manager PUSH=true tools/build-manager-image.sh 1.0.0
+```
+
+Notes:
+- The script runs the Gradle installDist tasks to assemble Manager and UI artifacts, then builds from manager/build/install/manager.
+- It labels the image with the current git commit if available (build-arg GIT_COMMIT).
+- To use the image with Kubernetes, override the image fields in kubernetes/manager/values.yaml as shown in kubernetes/README.md.
+
 ## Contributing to OpenRemote
 
 For information and how to set up a development environment, see the [Developer Guide](https://docs.openremote.io/docs/category/developer-guide).
@@ -74,6 +101,71 @@ We work with Java, Groovy, TypeScript, Gradle, Docker, and a wide range of APIs 
 We follow the [GitHub Flow](https://docs.github.com/en/get-started/quickstart/github-flow) workflow with tags and releases for published versions of our components; when working on the codebase create descriptive branch names (e.g. `feature/cool_feature_x`, `hotfix/flux_capacitor`, `issue/123`, etc.).
 
 When your changes are complete then create a Pull Request ensuring that your branch is up-to-date with the source branch and that code changes are covered by tests and that the full test suite passes.
+
+## Push to a public container registry and use on a VPS
+
+You can push your custom Manager image (including Farsi UI) to a public registry so your VPS can pull it without authentication. Below are examples for Docker Hub and GitHub Container Registry (GHCR).
+
+1) Docker Hub (public repo)
+- Create a repository on Docker Hub (e.g. docker.io/yourname/openremote-manager) and set its visibility to Public.
+- Login locally:
+```
+docker login
+```
+- Build and push using the helper script:
+```
+REPOSITORY=docker.io/yourname/openremote-manager PUSH=true \
+  tools/build-manager-image.sh 1.0.0
+```
+- You will end up with docker.io/yourname/openremote-manager:1.0.0 which your VPS can pull anonymously.
+
+2) GitHub Container Registry (GHCR, public package)
+- Create a public repository on GitHub (e.g. your-org/openremote-manager) or use any repo you have. Enable GHCR for your account/org.
+- Create a Personal Access Token (classic) with write:packages (and optionally delete:packages, read:packages).
+- Login to GHCR:
+```
+echo "<YOUR_GHCR_PAT>" | docker login ghcr.io -u <YOUR_GITHUB_USERNAME> --password-stdin
+```
+- Build and push:
+```
+REPOSITORY=ghcr.io/your-org/openremote-manager PUSH=true \
+  tools/build-manager-image.sh 1.0.0
+```
+- Ensure the package (container) visibility is set to Public in GitHub Packages so your VPS can pull without auth.
+
+Using the image on your VPS
+- Plain Docker:
+```
+docker pull ghcr.io/your-org/openremote-manager:1.0.0
+# Example run (adapt for your environment)
+docker run -d --name manager -p 8080:8080 \
+  -e OR_HOSTNAME=<your.domain> -e OR_SSL_PORT=-1 \
+  ghcr.io/your-org/openremote-manager:1.0.0
+```
+- Docker Compose (override image):
+  In your compose file or override file, set:
+```
+services:
+  manager:
+    image: ghcr.io/your-org/openremote-manager:1.0.0
+```
+  Then:
+```
+docker compose pull && docker compose up -d
+```
+- Kubernetes (Helm chart in kubernetes/):
+  Since it’s public, you typically don’t need imagePullSecrets. Create a values file:
+```
+image:
+  repository: ghcr.io/your-org/openremote-manager
+  tag: "1.0.0"
+  pullPolicy: IfNotPresent
+```
+  Deploy:
+```
+helm upgrade --install manager kubernetes/manager -f values.yaml
+```
+See kubernetes/README.md for more options.
 
 ## Discuss OpenRemote
 

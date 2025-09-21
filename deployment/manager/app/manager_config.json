@@ -1,8 +1,8 @@
 {
   "realms": {
     "default": {
-      "appTitle": "OpenRemote Manager Demo",
-      "language": "en"
+      "appTitle": "MABNA",
+      "language": "fa"
     },
     "smartcity": {
       "styles": ":host > * {--or-app-color2: #F6F7FA; --or-app-color3: #1B1464; --or-app-color4: #662D91;}",
