@@ -54,13 +54,33 @@
         html {
             height: 100%;
         }
+        /* Ensure custom fonts are served from the server shared assets */
+        @font-face {
+            font-family: 'B Nazanin';
+            src: local('B Nazanin'),
+                 url('/shared/fonts/B Nazanin/BNazanin.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'B Titr';
+            src: local('B Titr'),
+                 url('/shared/fonts/B Titr/BTitr.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
         body {
             margin: 0;
-            font-family: "Segoe UI", Helvetica,Arial,sans-serif,"Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+            font-family: "B Nazanin","Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
             line-height: 1.5;
             height: 100%;
             -webkit-font-smoothing: antialiased;
             overflow: hidden;
+        }
+        h1, h2, h3, .title, .heading {
+            font-family: "B Titr","B Nazanin","Segoe UI", Helvetica, Arial, sans-serif;
         }
     </style>
 

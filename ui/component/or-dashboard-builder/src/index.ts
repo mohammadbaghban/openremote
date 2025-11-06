@@ -31,6 +31,8 @@ import {MapWidget} from "./widgets/map-widget";
 import {AttributeInputWidget} from "./widgets/attribute-input-widget";
 import {TableWidget} from "./widgets/table-widget";
 import {GatewayWidget} from "./widgets/gateway-widget";
+import {VideoWidget} from "./widgets/video-widget";
+import {WebWidget} from "./widgets/web-widget";
 
 // language=CSS
 const styling = css`
@@ -213,11 +215,13 @@ export function registerWidgetTypes() {
     widgetTypes.set("linechart", ChartWidget.getManifest());
     widgetTypes.set("gauge", GaugeWidget.getManifest());
     widgetTypes.set("image", ImageWidget.getManifest());
+    widgetTypes.set("video", VideoWidget.getManifest());
     widgetTypes.set("kpi", KpiWidget.getManifest());
     widgetTypes.set("map", MapWidget.getManifest());
     widgetTypes.set("attributeinput", AttributeInputWidget.getManifest());
     widgetTypes.set("table", TableWidget.getManifest());
     widgetTypes.set("gateway", GatewayWidget.getManifest());
+    widgetTypes.set("web", WebWidget.getManifest());
 }
 
 @customElement("or-dashboard-builder")

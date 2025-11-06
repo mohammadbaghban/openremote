@@ -776,7 +776,13 @@
     "zoom": "Zoom",
     "center": "Center",
     "imageUrl": "Image URL",
-    "noImageSelected": "No image selected"
+    "noImageSelected": "No image selected",
+    "videoSettings": "Video Settings",
+    "videoUrl": "Video URL",
+    "noVideoSelected": "No video selected",
+    "webSettings": "Web Page Settings",
+    "webUrl": "Web Page URL",
+    "noWebSelected": "No web page selected"
   },
   "south": "South",
   "east": "East",

@@ -100,6 +100,48 @@ export class ChartSettings extends WidgetSettings {
                                               @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onShowLegendToggle(ev)}"
                                 ></or-mwc-input>
                             </div>
+                            <div class="switch-container">
+                                <span>Show grid</span>
+                                <or-mwc-input .type="${InputType.SWITCH}" style="margin: 0 -10px;" .value="${this.widgetConfig.showGrid ?? false}"
+                                              @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onShowGridToggle(ev)}"
+                                ></or-mwc-input>
+                            </div>
+                            ${when(this.widgetConfig.showGrid, () => html`
+                                <div style="display:flex; flex-direction: column; gap: 8px; margin-top: 8px;">
+                                    <div style="display:flex; gap: 12px;">
+                                        <or-mwc-input .type="${InputType.NUMBER}" label="Grid X intensity (0-1)" .value="${this.widgetConfig.gridXIntensity ?? 0.2}"
+                                                      min="0" max="1" step="0.05" style="width: 100%;"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onGridIntensityChange('x', ev)}"
+                                        ></or-mwc-input>
+                                        <or-mwc-input .type="${InputType.NUMBER}" label="Grid Y intensity (0-1)" .value="${this.widgetConfig.gridYIntensity ?? 0.2}"
+                                                      min="0" max="1" step="0.05" style="width: 100%;"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onGridIntensityChange('y', ev)}"
+                                        ></or-mwc-input>
+                                    </div>
+                                    <div style="display:flex; gap: 12px;">
+                                        <or-mwc-input .type="${InputType.NUMBER}" label="Grid X density (any number)" .value="${this.widgetConfig.gridXDensity ?? 10}"
+                                                      step="0.1" style="width: 100%;"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onGridDensityChange('x', ev)}"
+                                        ></or-mwc-input>
+                                        <or-mwc-input .type="${InputType.NUMBER}" label="Grid Y density (any number)" .value="${this.widgetConfig.gridYDensity ?? 10}"
+                                                      step="0.1" style="width: 100%;"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onGridDensityChange('y', ev)}"
+                                        ></or-mwc-input>
+                                    </div>
+                                    <div style="display:flex; gap: 12px;">
+                                        <or-mwc-input .type="${InputType.SELECT}" label="X axis tick unit" style="width: 100%;"
+                                                      .options="${['millisecond','second','minute','hour']}"
+                                                      .value="${this.widgetConfig.chartOptions?.options?.scales?.x?.time?.unit ?? 'second'}"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onXAxisUnitChange(ev)}"
+                                        ></or-mwc-input>
+                                        <or-mwc-input .type="${InputType.NUMBER}" label="X axis step size" style="width: 100%;"
+                                                      step="1" min="1"
+                                                      .value="${this.widgetConfig.chartOptions?.options?.scales?.x?.time?.stepSize ?? 1}"
+                                                      @or-mwc-input-changed="${(ev: OrInputChangedEvent) => this.onXAxisStepSizeChange(ev)}"
+                                        ></or-mwc-input>
+                                    </div>
+                                </div>
+                            `)}
                         </div>
                     </div>
                 </settings-panel>
@@ -271,6 +313,124 @@ export class ChartSettings extends WidgetSettings {
 
     protected onShowLegendToggle(ev: OrInputChangedEvent) {
         this.widgetConfig.showLegend = ev.detail.value;
+        this.notifyConfigUpdate();
+    }
+
+    protected onShowGridToggle(ev: OrInputChangedEvent) {
+        const enabled = ev.detail.value as boolean;
+        this.widgetConfig.showGrid = enabled;
+        // Ensure structure exists
+        this.widgetConfig.chartOptions = this.widgetConfig.chartOptions || {};
+        this.widgetConfig.chartOptions.options = this.widgetConfig.chartOptions.options || {};
+        this.widgetConfig.chartOptions.options.scales = this.widgetConfig.chartOptions.options.scales || {};
+        const scales = this.widgetConfig.chartOptions.options.scales;
+        scales.x = scales.x || {};
+        scales.x.grid = scales.x.grid || {};
+        scales.y = scales.y || {};
+        scales.y.grid = scales.y.grid || {};
+        // Apply display flags
+        scales.x.grid.display = enabled;
+        scales.y.grid.display = enabled;
+        // Apply colors based on current intensities
+        const xi = this.widgetConfig.gridXIntensity ?? 0.2;
+        const yi = this.widgetConfig.gridYIntensity ?? 0.2;
+        scales.x.grid.color = this.getGridColor(xi);
+        scales.y.grid.color = this.getGridColor(yi);
+        this.notifyConfigUpdate();
+    }
+
+    protected onGridIntensityChange(axis: 'x' | 'y', ev: OrInputChangedEvent) {
+        const val = Math.max(0, Math.min(1, Number(ev.detail.value)));
+        if(axis === 'x') {
+            this.widgetConfig.gridXIntensity = val;
+        } else {
+            this.widgetConfig.gridYIntensity = val;
+        }
+        // Ensure structure exists
+        this.widgetConfig.chartOptions = this.widgetConfig.chartOptions || {};
+        this.widgetConfig.chartOptions.options = this.widgetConfig.chartOptions.options || {};
+        this.widgetConfig.chartOptions.options.scales = this.widgetConfig.chartOptions.options.scales || {};
+        const scales = this.widgetConfig.chartOptions.options.scales;
+        if(axis === 'x') {
+            scales.x = scales.x || {};
+            scales.x.grid = scales.x.grid || {};
+            scales.x.grid.color = this.getGridColor(val);
+            if(this.widgetConfig.showGrid !== false) { scales.x.grid.display = true; }
+        } else {
+            scales.y = scales.y || {};
+            scales.y.grid = scales.y.grid || {};
+            scales.y.grid.color = this.getGridColor(val);
+            if(this.widgetConfig.showGrid !== false) { scales.y.grid.display = true; }
+        }
+        this.notifyConfigUpdate();
+    }
+
+    protected getGridColor(alpha: number): string {
+        // Neutral black with variable alpha for visibility across themes.
+        return `rgba(0,0,0,${alpha})`;
+    }
+
+    protected onXAxisUnitChange(ev: OrInputChangedEvent) {
+        const unit = String(ev.detail.value || 'second');
+        this.widgetConfig.chartOptions = this.widgetConfig.chartOptions || {};
+        this.widgetConfig.chartOptions.options = this.widgetConfig.chartOptions.options || {};
+        this.widgetConfig.chartOptions.options.scales = this.widgetConfig.chartOptions.options.scales || {};
+        const scales = this.widgetConfig.chartOptions.options.scales;
+        scales.x = scales.x || {};
+        scales.x.time = scales.x.time || {};
+        scales.x.time.unit = unit;
+        this.notifyConfigUpdate();
+    }
+
+    protected onXAxisStepSizeChange(ev: OrInputChangedEvent) {
+        let step = Number(ev.detail.value);
+        if (isNaN(step) || step <= 0) { step = 1; }
+        this.widgetConfig.chartOptions = this.widgetConfig.chartOptions || {};
+        this.widgetConfig.chartOptions.options = this.widgetConfig.chartOptions.options || {};
+        this.widgetConfig.chartOptions.options.scales = this.widgetConfig.chartOptions.options.scales || {};
+        const scales = this.widgetConfig.chartOptions.options.scales;
+        scales.x = scales.x || {};
+        scales.x.time = scales.x.time || {};
+        scales.x.time.stepSize = Math.round(step);
+        this.notifyConfigUpdate();
+    }
+
+    protected onGridDensityChange(axis: 'x' | 'y', ev: OrInputChangedEvent) {
+        // Accept any number, including floats < 1. Store raw value and derive an effective integer for Chart.js.
+        let raw = Number(ev.detail.value);
+        if (isNaN(raw)) { raw = 1; }
+        if(axis === 'x') {
+            this.widgetConfig.gridXDensity = raw;
+        } else {
+            this.widgetConfig.gridYDensity = raw;
+        }
+        // Compute effective maxTicksLimit
+        const base = 10; // baseline tick count used when raw < 1 (acts as a multiplier)
+        let effective: number;
+        if (raw <= 0) {
+            effective = 2; // minimal sensible number of ticks
+        } else if (raw < 1) {
+            effective = Math.max(2, Math.round(base * raw));
+        } else {
+            effective = Math.max(2, Math.round(raw));
+        }
+        // Cap to avoid excessive rendering cost
+        effective = Math.min(100, effective);
+
+        // Ensure structure exists
+        this.widgetConfig.chartOptions = this.widgetConfig.chartOptions || {};
+        this.widgetConfig.chartOptions.options = this.widgetConfig.chartOptions.options || {};
+        this.widgetConfig.chartOptions.options.scales = this.widgetConfig.chartOptions.options.scales || {};
+        const scales = this.widgetConfig.chartOptions.options.scales;
+        if(axis === 'x') {
+            scales.x = scales.x || {};
+            scales.x.ticks = scales.x.ticks || {};
+            scales.x.ticks.maxTicksLimit = effective;
+        } else {
+            scales.y = scales.y || {};
+            scales.y.ticks = scales.y.ticks || {};
+            scales.y.ticks.maxTicksLimit = effective;
+        }
         this.notifyConfigUpdate();
     }
 

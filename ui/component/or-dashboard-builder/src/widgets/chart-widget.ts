@@ -19,6 +19,12 @@ export interface ChartWidgetConfig extends WidgetConfig {
     showTimestampControls: boolean;
     defaultTimePresetKey: string;
     showLegend: boolean;
+    // Grid options
+    showGrid?: boolean;
+    gridXIntensity?: number; // 0..1 opacity for vertical grid lines
+    gridYIntensity?: number; // 0..1 opacity for horizontal grid lines
+    gridXDensity?: number; // desired number of grid lines (tick limit) on X axis
+    gridYDensity?: number; // desired number of grid lines (tick limit) on Y axis
 }
 
 function getDefaultTimePresetOptions(): Map<string, TimePresetCallback> {
@@ -52,6 +58,7 @@ function getDefaultWidgetConfig(): ChartWidgetConfig {
     const preset = "last24Hours"
     const dateFunc = getDefaultTimePresetOptions().get(preset) as TimePresetCallback;
     const dates = dateFunc(new Date());
+    const defaultGridIntensity = 0.2; // default opacity for grid lines when enabled
     return {
         attributeRefs: [],
         rightAxisAttributes: [],
@@ -63,20 +70,38 @@ function getDefaultWidgetConfig(): ChartWidgetConfig {
         chartOptions: {
             options: {
                 scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            color: `rgba(0,0,0,${defaultGridIntensity})`
+                        }
+                    },
                     y: {
                         min: undefined,
-                        max: undefined
+                        max: undefined,
+                        grid: {
+                            display: false,
+                            color: `rgba(0,0,0,${defaultGridIntensity})`
+                        }
                     },
                     y1: {
                         min: undefined,
-                        max: undefined
+                        max: undefined,
+                        grid: {
+                            drawOnChartArea: false
+                        }
                     }
                 }
             },
         },
         showTimestampControls: false,
         defaultTimePresetKey: preset,
-        showLegend: true
+        showLegend: true,
+        showGrid: false,
+        gridXIntensity: defaultGridIntensity,
+        gridYIntensity: defaultGridIntensity,
+        gridXDensity: 10,
+        gridYDensity: 10
     };
 }
 

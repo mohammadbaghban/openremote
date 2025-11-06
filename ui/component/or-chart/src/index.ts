@@ -571,7 +571,7 @@ export class OrChart extends translate(i18next)(LitElement) {
                                     style: "normal"
                                 }
                             },
-                            gridLines: {
+                            grid: {
                                 color: "#cccccc"
                             }
                         }
